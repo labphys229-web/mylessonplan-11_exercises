@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Інтерактивний тренажер: Закон Джоуля-Ленца</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        physics: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035485',
+                            900: '#0c4a6e',
+                        },
+                        amberGlow: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .input-cell {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-cell:focus {
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+            border-color: #38bdf8;
+            outline: none;
+        }
+
+        .correct-cell {
+            background-color: rgba(34, 197, 94, 0.15) !important;
+            border-color: #22c55e !important;
+            color: #4ade80 !important;
+        }
+
+        .incorrect-cell {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+
+        /* Custom Scrollbar for responsiveness */
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Glowing accents */
+        .glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+        }
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8 flex flex-col items-center justify-between min-h-screen">
+
+    <div class="w-full max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header Section -->
+        <header class="glass-card rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex items-center gap-4 text-center sm:text-left">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-red-500 flex items-center justify-center text-2xl shadow-lg shrink-0">
+                    <i class="fa-solid fa-bolt text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+                        Закон Джоуля-Ленца
+                    </h1>
+                    <p class="text-slate-400 text-sm sm:text-base mt-0.5">
+                        Тренувальні вправи для усного рахунку: <span class="font-mono text-amber-300 font-semibold">Q = I² · R · t</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats & Quick Actions -->
+            <div class="flex items-center gap-3 bg-slate-900/60 p-2.5 sm:p-3 rounded-xl border border-slate-700/50">
+                <div class="text-center px-3 border-r border-slate-700">
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-medium">Правильно</span>
+                    <span id="score-counter" class="text-xl sm:text-2xl font-bold text-green-400 font-mono">0 / 0</span>
+                </div>
+                <div class="text-center px-3 border-r border-slate-700">
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-medium">Точність</span>
+                    <span id="accuracy-counter" class="text-xl sm:text-2xl font-bold text-sky-400 font-mono">100%</span>
+                </div>
+                <button id="btn-sound" onclick="toggleSound()" class="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Переключити звук">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-amber-400"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-amber-500">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-amber-400">Кількість теплоти</span>
+                    <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Q [Дж]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">Q = I² · R · t</div>
+                <p class="text-xs text-slate-400 mt-1">Теплова енергія, що виділяється провідником</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-sky-500">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-sky-400">Сила струму</span>
+                    <span class="text-xs font-mono bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded">I [А]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">I = √(Q / (R · t))</div>
+                <p class="text-xs text-slate-400 mt-1">Квадратний корінь із відношення heat / (R·t)</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-emerald-500">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-emerald-400">Опір провідника</span>
+                    <span class="text-xs font-mono bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">R [Ом]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">R = Q / (I² · t)</div>
+                <p class="text-xs text-slate-400 mt-1">Електричний опір ділянки кола</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-purple-500">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-purple-400">Час струму</span>
+                    <span class="text-xs font-mono bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">t [с]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">t = Q / (I² · R)</div>
+                <p class="text-xs text-slate-400 mt-1">Тривалість проходження струму</p>
+            </div>
+        </div>
+
+        <main class="glass-card rounded-2xl shadow-2xl p-4 sm:p-6 overflow-hidden">
+            
+            <!-- Table Header Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-200">
+                        Завдання: Обчисліть невідому величину
+                    </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="generateNewExercise()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 hover:border-sky-500 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Нові числа</span>
+                    </button>
+                    <button onclick="clearInputs()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium text-sm transition-all" title="Очистити поле">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-700/60 shadow-inner">
+                <table class="w-full text-left border-collapse min-w-[640px]">
+                    <thead>
+                        <tr class="bg-slate-900/90 text-slate-300 text-xs sm:text-sm font-semibold uppercase tracking-wider border-b border-slate-700">
+                            <th class="p-3.5 sm:p-4 w-12 text-center text-slate-500">№</th>
+                            <th class="p-3.5 sm:p-4 text-sky-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-wave-square"></i>
+                                    <span>Сила струму, <span class="font-mono text-sky-300">I (А)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-emerald-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-microchip"></i>
+                                    <span>Опір, <span class="font-mono text-emerald-300">R (Ом)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-purple-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-stopwatch"></i>
+                                    <span>Час, <span class="font-mono text-purple-300">t (с)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-amber-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-fire"></i>
+                                    <span>Кількість теплоти, <span class="font-mono text-amber-300">Q (Дж)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-center w-28">Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exercise-tbody" class="divide-y divide-slate-800/80 bg-slate-900/40 text-sm sm:text-base font-mono">
+                        <!-- Rows rendered via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                    <span>Всі числа підібрані зручно для <b>усного обчислення</b> в голові.</span>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleHintModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl font-semibold text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-circle-question"></i>
+                        <span>Підказка</span>
+                    </button>
+
+                    <button onclick="checkAnswers()" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all flex items-center gap-2 text-base">
+                        <i class="fa-solid fa-check-double"></i>
+                        <span>Перевірити відповіді</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Dynamic Success / Feedback Banner -->
+        <div id="feedback-banner" class="hidden glass-card rounded-2xl p-4 border flex items-center justify-between gap-4 transition-all">
+            <div class="flex items-center gap-3">
+                <div id="feedback-icon" class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold"></div>
+                <div>
+                    <h3 id="feedback-title" class="font-bold text-base sm:text-lg"></h3>
+                    <p id="feedback-text" class="text-xs sm:text-sm text-slate-300"></p>
+                </div>
+            </div>
+            <button onclick="closeFeedback()" class="text-slate-400 hover:text-white text-lg px-2">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hint Modal -->
+    <div id="hint-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="glass-card bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-slate-700 shadow-2xl relative space-y-4">
+            <button onclick="toggleHintModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-3 text-amber-400">
+                <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                <h3 class="text-xl font-bold">Як швидко підрахувати?</h3>
+            </div>
+            <p class="text-sm text-slate-300 leading-relaxed">
+                Основний закон Джоуля-Ленца:
+                <br>
+                <span class="text-amber-300 font-mono font-bold block my-1 text-center text-base bg-slate-800 py-1.5 rounded-lg border border-slate-700">Q = I² · R · t</span>
+            </p>
+            <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-800 pt-3">
+                <li class="flex items-start gap-2">
+                    <span class="text-sky-400 font-bold">•</span>
+                    <span>Спочатку піднесіть силу струму <b class="text-sky-300">I</b> до квадрату (<span class="font-mono">I²</span>).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 font-bold">•</span>
+                    <span>Помножте отриманий результат на опір <b class="text-emerald-300">R</b> та час <b class="text-purple-300">t</b>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-amber-400 font-bold">•</span>
+                    <span>Якщо треба знайти <b class="text-sky-300">I</b>, розділіть <b class="text-amber-300">Q</b> на <span class="font-mono">(R · t)</span> і добудьте квадратний корінь.</span>
+                </li>
+            </ul>
+            <div class="pt-2 text-center">
+                <button onclick="toggleHintModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-sm">
+                    Зрозуміло!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-8 text-center text-xs text-slate-500">
+        <p>Інтерактивна вправа з фізики • Закон Джоуля-Ленца для 8-9 класів</p>
+    </footer>
+
+    <script>
+        // Preset clean data designed specifically for easy mental math calculations
+        const defaultDataset = [
+            { I: 2, R: 5, t: 10, Q: null },      // Q = 2^2 * 5 * 10 = 4 * 50 = 200 J
+            { I: 1, R: 10, t: null, Q: 300 },    // t = 300 / (1 * 10) = 30 s
+            { I: 3, R: null, t: 10, Q: 1800 },   // R = 1800 / (9 * 10) = 20 Ohm
+            { I: null, R: 2, t: 50, Q: 400 },    // I = sqrt(400 / 100) = sqrt(4) = 2 A
+            { I: 5, R: 4, t: 2, Q: null },       // Q = 25 * 4 * 2 = 200 J
+            { I: 2, R: 25, t: null, Q: 1000 },   // t = 1000 / (4 * 25) = 10 s
+            { I: null, R: 10, t: 30, Q: 1200 },   // I = sqrt(1200 / 300) = sqrt(4) = 2 A
+            { I: 4, R: null, t: 5, Q: 800 }      // R = 800 / (16 * 5) = 800 / 80 = 10 Ohm
+        ];
+
+        let currentRows = [];
+        let attemptsCount = 0;
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        // Initialize Audio Context on user interaction
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Web Audio Synthesizer sound effects
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (!audioCtx) return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now); // A3
+                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'click') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                }
+            } catch (e) {
+                console.log("Audio not supported or blocked", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-amber-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+            }
+        }
+
+        function calculateAnswer(item) {
+            if (item.Q === null) return (item.I * item.I) * item.R * item.t;
+            if (item.R === null) return item.Q / ((item.I * item.I) * item.t);
+            if (item.t === null) return item.Q / ((item.I * item.I) * item.R);
+            if (item.I === null) return Math.sqrt(item.Q / (item.R * item.t));
+            return 0;
+        }
+
+        // Generator for convenient random numbers for oral calculations
+        function generateRandomConvenientTask() {
+            // Pick unknown type randomly (0: I, 1: R, 2: t, 3: Q)
+            const target = Math.floor(Math.random() * 4);
+
+            const easyI = [1, 2, 3, 4, 5, 10];
+            const easyR = [2, 4, 5, 10, 20, 25, 50];
+            const easyT = [2, 5, 10, 20, 30, 60, 100];
+
+            let I = easyI[Math.floor(Math.random() * easyI.length)];
+            let R = easyR[Math.floor(Math.random() * easyR.length)];
+            let t = easyT[Math.floor(Math.random() * easyT.length)];
+
+            // Special adjust to ensure clean simple numbers when finding I
+            if (target === 0) {
+                // Find I: Q / (R*t) must be a perfect square like 1, 4, 9, 16, 25
+                const squareChoice = [1, 4, 9, 16, 25][Math.floor(Math.random() * 5)];
+                I = Math.sqrt(squareChoice);
+            }
+
+            let Q = (I * I) * R * t;
+
+            return {
+                I: target === 0 ? null : I,
+                R: target === 1 ? null : R,
+                t: target === 2 ? null : t,
+                Q: target === 3 ? null : Q
+            };
+        }
+
+        function loadDataset(dataset) {
+            currentRows = dataset.map((item, index) => ({
+                id: index,
+                I: item.I,
+                R: item.R,
+                t: item.t,
+                Q: item.Q,
+                correctAnswer: calculateAnswer(item),
+                userAnswer: '',
+                status: 'pending' // pending, correct, incorrect
+            }));
+            renderTable();
+            updateStats();
+            hideFeedback();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('exercise-tbody');
+            tbody.innerHTML = '';
+
+            currentRows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors";
+
+                // Index
+                const tdIndex = `<td class="p-3.5 sm:p-4 text-center text-slate-500 font-semibold">${index + 1}</td>`;
+
+                // Columns I, R, t, Q
+                const cols = [
+                    { name: 'I', val: row.I, textClass: 'text-sky-300', placeholder: 'значення I' },
+                    { name: 'R', val: row.R, textClass: 'text-emerald-300', placeholder: 'значення R' },
+                    { name: 't', val: row.t, textClass: 'text-purple-300', placeholder: 'значення t' },
+                    { name: 'Q', val: row.Q, textClass: 'text-amber-300', placeholder: 'значення Q' },
+                ];
+
+                let rowHtml = tdIndex;
+
+                cols.forEach(col => {
+                    if (col.val !== null) {
+                        rowHtml += `<td class="p-3.5 sm:p-4 font-semibold ${col.textClass}">${col.val}</td>`;
+                    } else {
+                        // Editable Input cell
+                        let statusClass = "bg-slate-800/90 border-slate-700 text-amber-300";
+                        if (row.status === 'correct') statusClass = "correct-cell font-bold";
+                        if (row.status === 'incorrect') statusClass = "incorrect-cell font-bold";
+
+                        rowHtml += `
+                            <td class="p-2 sm:p-3">
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    id="input-row-${index}"
+                                    value="${row.userAnswer}"
+                                    oninput="handleInput(${index}, this.value)"
+                                    onkeydown="handleKeyDown(event, ${index})"
+                                    placeholder="?"
+                                    class="w-full max-w-[130px] px-3 py-1.5 rounded-lg border text-center font-mono text-base font-bold transition-all input-cell ${statusClass}"
+                                />
+                            </td>
+                        `;
+                    }
+                });
+
+                // Status Icon
+                let statusBadge = `<span class="text-slate-600"><i class="fa-solid fa-minus"></i></span>`;
+                if (row.status === 'correct') {
+                    statusBadge = `<span class="text-green-400 font-semibold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check"></i> Вірно</span>`;
+                } else if (row.status === 'incorrect') {
+                    statusBadge = `<span class="text-red-400 font-semibold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Помилка</span>`;
+                }
+
+                rowHtml += `<td class="p-3.5 sm:p-4 text-center">${statusBadge}</td>`;
+
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleInput(rowIndex, val) {
+            playSound('click');
+            currentRows[rowIndex].userAnswer = val.trim();
+            if (currentRows[rowIndex].status !== 'pending') {
+                currentRows[rowIndex].status = 'pending';
+                renderTable();
+            }
+        }
+
+        function handleKeyDown(e, index) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAnswers();
+            }
+        }
+
+        function checkAnswers() {
+            let correctCount = 0;
+            let filledCount = 0;
+            let hasError = false;
+
+            currentRows.forEach((row, i) => {
+                const inputEl = document.getElementById(`input-row-${i}`);
+                if (!inputEl) return;
+
+                const val = parseFloat(row.userAnswer.replace(',', '.'));
+
+                if (!isNaN(val)) {
+                    filledCount++;
+                    // Tolerance for rounding floats
+                    if (Math.abs(val - row.correctAnswer) < 0.01) {
+                        row.status = 'correct';
+                        correctCount++;
+                    } else {
+                        row.status = 'incorrect';
+                        hasError = true;
+                    }
+                } else {
+                    row.status = 'pending';
+                }
+            });
+
+            attemptsCount++;
+            renderTable();
+            updateStats();
+
+            // Provide sound and visual feedback
+            if (correctCount === currentRows.length) {
+                playSound('success');
+                showFeedback('success', 'Чудова робота! 🌟', 'Ви правильно розрахували всі величини у таблиці!');
+            } else if (hasError) {
+                playSound('error');
+                showFeedback('error', 'Є помилки у розрахунках 🧐', 'Перевірте виділені червоним рядки. Пам\'ятайте про квадрат сили струму (I²)!');
+            } else if (filledCount < currentRows.length) {
+                playSound('click');
+                showFeedback('info', 'Заповніть порожні клітинки ✏️', `Ви відповіли правильно на ${correctCount} із ${currentRows.length} завдань.`);
+            }
+        }
+
+        function updateStats() {
+            const correctTotal = currentRows.filter(r => r.status === 'correct').length;
+            const total = currentRows.length;
+            
+            document.getElementById('score-counter').innerText = `${correctTotal} / ${total}`;
+
+            let accuracy = 100;
+            if (attemptsCount > 0) {
+                accuracy = Math.round((correctTotal / total) * 100);
+            }
+            document.getElementById('accuracy-counter').innerText = `${accuracy}%`;
+        }
+
+        function generateNewExercise() {
+            playSound('click');
+            const newDataset = [];
+            for (let i = 0; i < 8; i++) {
+                newDataset.push(generateRandomConvenientTask());
+            }
+            loadDataset(newDataset);
+        }
+
+        function clearInputs() {
+            playSound('click');
+            currentRows.forEach(row => {
+                row.userAnswer = '';
+                row.status = 'pending';
+            });
+            renderTable();
+            hideFeedback();
+        }
+
+        function showFeedback(type, title, text) {
+            const banner = document.getElementById('feedback-banner');
+            const icon = document.getElementById('feedback-icon');
+            const titleEl = document.getElementById('feedback-title');
+            const textEl = document.getElementById('feedback-text');
+
+            banner.classList.remove('hidden', 'border-green-500/30', 'border-red-500/30', 'border-amber-500/30', 'bg-green-950/30', 'bg-red-950/30', 'bg-amber-950/30');
+
+            if (type === 'success') {
+                banner.classList.add('border-green-500/40', 'bg-green-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-trophy"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-green-300';
+            } else if (type === 'error') {
+                banner.classList.add('border-red-500/40', 'bg-red-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-red-300';
+            } else {
+                banner.classList.add('border-sky-500/40', 'bg-sky-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-info"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-sky-300';
+            }
+
+            titleEl.innerText = title;
+            textEl.innerText = text;
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback-banner').classList.add('hidden');
+        }
+
+        function closeFeedback() {
+            hideFeedback();
+        }
+
+        function toggleHintModal() {
+            playSound('click');
+            const modal = document.getElementById('hint-modal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+
+        // Initialize on Load
+        window.onload = function() {
+            loadDataset(defaultDataset);
+        };
+    </script>
+</body>
+</html>
