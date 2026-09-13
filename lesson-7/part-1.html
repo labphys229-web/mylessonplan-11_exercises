@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Інтерактивний тренажер: Закон Ома для повного кола</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        physics: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035485',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .input-cell {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-cell:focus {
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+            border-color: #38bdf8;
+            outline: none;
+        }
+
+        .correct-cell {
+            background-color: rgba(34, 197, 94, 0.18) !important;
+            border-color: #22c55e !important;
+            color: #4ade80 !important;
+        }
+
+        .incorrect-cell {
+            background-color: rgba(239, 68, 68, 0.18) !important;
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8 flex flex-col items-center justify-between min-h-screen">
+
+    <div class="w-full max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header Section -->
+        <header class="glass-card rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex items-center gap-4 text-center sm:text-left">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-2xl shadow-lg shrink-0">
+                    <i class="fa-solid fa-car-battery text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-sky-400 via-indigo-300 to-teal-300 bg-clip-text text-transparent">
+                        Закон Ома для повного кола
+                    </h1>
+                    <p class="text-slate-400 text-sm sm:text-base mt-0.5">
+                        Тренувальні вправи для усного рахунку
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats & Quick Actions -->
+            <div class="flex items-center gap-3 bg-slate-900/60 p-2.5 sm:p-3 rounded-xl border border-slate-700/50">
+                <div class="text-center px-3 border-r border-slate-700">
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-medium">Правильно</span>
+                    <span id="score-counter" class="text-xl sm:text-2xl font-bold text-green-400 font-mono">0 / 0</span>
+                </div>
+                <div class="text-center px-3 border-r border-slate-700">
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-medium">Точність</span>
+                    <span id="accuracy-counter" class="text-xl sm:text-2xl font-bold text-sky-400 font-mono">100%</span>
+                </div>
+                <button id="btn-sound" onclick="toggleSound()" class="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Переключити звук">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-sky-400"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Formula Reference Cards (Hidden by default) -->
+        <div class="flex justify-end">
+            <button onclick="toggleFormulas()" class="px-3.5 py-1.5 text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-sky-300 rounded-xl border border-sky-500/30 flex items-center gap-2 transition-all shadow-sm">
+                <i id="toggle-formulas-icon" class="fa-solid fa-eye"></i>
+                <span id="toggle-formulas-text">Показати формули-підказки</span>
+            </button>
+        </div>
+
+        <div id="formula-cards" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-yellow-400">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-yellow-400">ЕРС джерела</span>
+                    <span class="text-xs font-mono bg-yellow-400/20 text-yellow-300 px-2 py-0.5 rounded">ℰ [В]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">ℰ = I · (R + r)</div>
+                <p class="text-xs text-slate-400 mt-1">Електрорушійна сила джерела струму</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-sky-400">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-sky-400">Сила струму</span>
+                    <span class="text-xs font-mono bg-sky-400/20 text-sky-300 px-2 py-0.5 rounded">I [А]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">I = ℰ / (R + r)</div>
+                <p class="text-xs text-slate-400 mt-1">Повний струм у замкненому колі</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-emerald-400">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-emerald-400">Зовнішній опір</span>
+                    <span class="text-xs font-mono bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded">R [Ом]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">R = (ℰ / I) - r</div>
+                <p class="text-xs text-slate-400 mt-1">Опір зовнішньої ділянки кола</p>
+            </div>
+
+            <div class="glass-card rounded-xl p-4 flex flex-col justify-between border-l-4 border-purple-400">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs uppercase tracking-wider font-bold text-purple-400">Внутрішній опір</span>
+                    <span class="text-xs font-mono bg-purple-400/20 text-purple-300 px-2 py-0.5 rounded">r [Ом]</span>
+                </div>
+                <div class="text-lg font-bold font-mono text-white">r = (ℰ / I) - R</div>
+                <p class="text-xs text-slate-400 mt-1">Внутрішній опір самóго джерела</p>
+            </div>
+        </div>
+
+        <!-- Main Interactive Content Block -->
+        <main class="glass-card rounded-2xl shadow-2xl p-4 sm:p-6 overflow-hidden">
+            
+            <!-- Table Header Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-sky-400 animate-pulse"></span>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-200">
+                        Обчисліть невідому величину в кожному рядку
+                    </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="generateNewExercise()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 hover:border-sky-500 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Нові числа</span>
+                    </button>
+                    <button onclick="clearInputs()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium text-sm transition-all" title="Очистити введення">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-700/60 shadow-inner">
+                <table class="w-full text-left border-collapse min-w-[680px]">
+                    <thead>
+                        <tr class="bg-slate-900/90 text-slate-300 text-xs sm:text-sm font-semibold uppercase tracking-wider border-b border-slate-700">
+                            <th class="p-3.5 sm:p-4 w-12 text-center text-slate-500">№</th>
+                            <th class="p-3.5 sm:p-4 text-yellow-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <span>ЕРС, <span class="font-mono text-yellow-300">ℰ (В)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-sky-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-wave-square"></i>
+                                    <span>Сила струму, <span class="font-mono text-sky-300">I (А)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-emerald-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-microchip"></i>
+                                    <span>Зовнішній опір, <span class="font-mono text-emerald-300">R (Ом)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-purple-400">
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-battery-half"></i>
+                                    <span>Внутрішній опір, <span class="font-mono text-purple-300">r (Ом)</span></span>
+                                </div>
+                            </th>
+                            <th class="p-3.5 sm:p-4 text-center w-28">Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exercise-tbody" class="divide-y divide-slate-800/80 bg-slate-900/40 text-sm sm:text-base font-mono">
+                        <!-- Dynamic Rows loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <i class="fa-solid fa-lightbulb text-yellow-400"></i>
+                    <span>Числа підібрані для зручного <b>усного обчислення</b> в голові.</span>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleHintModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 rounded-xl font-semibold text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-circle-question"></i>
+                        <span>Підказка</span>
+                    </button>
+
+                    <button onclick="checkAnswers()" class="px-6 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-sky-500/40 transition-all flex items-center gap-2 text-base">
+                        <i class="fa-solid fa-check-double"></i>
+                        <span>Перевірити відповіді</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Feedback Banner -->
+        <div id="feedback-banner" class="hidden glass-card rounded-2xl p-4 border flex items-center justify-between gap-4 transition-all">
+            <div class="flex items-center gap-3">
+                <div id="feedback-icon" class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold"></div>
+                <div>
+                    <h3 id="feedback-title" class="font-bold text-base sm:text-lg"></h3>
+                    <p id="feedback-text" class="text-xs sm:text-sm text-slate-300"></p>
+                </div>
+            </div>
+            <button onclick="closeFeedback()" class="text-slate-400 hover:text-white text-lg px-2">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hint Modal -->
+    <div id="hint-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="glass-card bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-slate-700 shadow-2xl relative space-y-4">
+            <button onclick="toggleHintModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-3 text-sky-400">
+                <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                <h3 class="text-xl font-bold">Як швидко розрахувати?</h3>
+            </div>
+            <p class="text-sm text-slate-300 leading-relaxed">
+                Закон Ома для повного кола пов'язує ЕРС джерела ($\mathcal{E}$), силу струму ($I$), зовнішній ($R$) та внутрішній ($r$) опори:
+                <br>
+                <span class="text-sky-300 font-mono font-bold block my-2 text-center text-base bg-slate-800 py-2 rounded-lg border border-slate-700">
+                    I = ℰ / (R + r)
+                </span>
+            </p>
+            <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-800 pt-3">
+                <li class="flex items-start gap-2">
+                    <span class="text-yellow-400 font-bold">•</span>
+                    <span>Для шуканого <b class="text-yellow-300">ℰ</b>: помножте струм на повний опір <span class="font-mono text-sky-300">I · (R + r)</span>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-sky-400 font-bold">•</span>
+                    <span>Для шуканого <b class="text-sky-300">I</b>: розділіть <b class="text-yellow-300">ℰ</b> на суму опорів <span class="font-mono text-emerald-300">(R + r)</span>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 font-bold">•</span>
+                    <span>Для шуканого <b class="text-emerald-300">R</b> або <b class="text-purple-300">r</b>: знайдіть повний опір <span class="font-mono">R<sub>повн</sub> = ℰ / I</span> та відніміть відомий опір.</span>
+                </li>
+            </ul>
+            <div class="pt-2 text-center">
+                <button onclick="toggleHintModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-sm">
+                    Все зрозуміло!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-8 text-center text-xs text-slate-500">
+        <p>Інтерактивна вправа з фізики • Ліцей №10 _ кабінет фізики 229</p>
+    </footer>
+
+    <script>
+        // Preset clean data designed specifically for mental math calculations
+        const defaultDataset = [
+            { E: 12, I: 2, R: 5, r: null },      // r = (12/2) - 5 = 6 - 5 = 1 Ohm
+            { E: 24, I: null, R: 10, r: 2 },     // I = 24 / (10 + 2) = 2 A
+            { E: null, I: 3, R: 7, r: 1 },       // E = 3 * (7 + 1) = 24 V
+            { E: 15, I: 3, R: null, r: 1 },      // R = (15/3) - 1 = 4 Ohm
+            { E: 9, I: 2, R: 4, r: null },       // r = (9/2) - 4 = 0.5 Ohm
+            { E: 30, I: 5, R: 5, r: null },      // r = (30/5) - 5 = 1 Ohm
+            { E: null, I: 0.5, R: 18, r: 2 },    // E = 0.5 * 20 = 10 V
+            { E: 18, I: 2, R: null, r: 1 }       // R = (18/2) - 1 = 8 Ohm
+        ];
+
+        let currentRows = [];
+        let attemptsCount = 0;
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        // Initialize Web Audio synthesizer
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (!audioCtx) return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'click') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(420, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                }
+            } catch (e) {
+                console.log("Audio not supported or blocked", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-sky-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+            }
+        }
+
+        function calculateAnswer(item) {
+            if (item.E === null) return item.I * (item.R + item.r);
+            if (item.I === null) return item.E / (item.R + item.r);
+            if (item.R === null) return (item.E / item.I) - item.r;
+            if (item.r === null) return (item.E / item.I) - item.R;
+            return 0;
+        }
+
+        function generateRandomConvenientTask() {
+            // Pick unknown type randomly (0: E, 1: I, 2: R, 3: r)
+            const target = Math.floor(Math.random() * 4);
+
+            const easyI = [0.5, 1, 2, 3, 4, 5, 10];
+            const easyR = [1, 2, 3, 4, 5, 7, 8, 9, 10, 18, 19];
+            const easyr = [0.5, 1, 2, 3];
+
+            let I = easyI[Math.floor(Math.random() * easyI.length)];
+            let R = easyR[Math.floor(Math.random() * easyR.length)];
+            let r = easyr[Math.floor(Math.random() * easyr.length)];
+
+            // Ensure total R + r forms nice numbers
+            let totalR = R + r;
+            let E = I * totalR;
+
+            return {
+                E: target === 0 ? null : parseFloat(E.toFixed(2)),
+                I: target === 1 ? null : parseFloat(I.toFixed(2)),
+                R: target === 2 ? null : parseFloat(R.toFixed(2)),
+                r: target === 3 ? null : parseFloat(r.toFixed(2))
+            };
+        }
+
+        function loadDataset(dataset) {
+            currentRows = dataset.map((item, index) => ({
+                id: index,
+                E: item.E,
+                I: item.I,
+                R: item.R,
+                r: item.r,
+                correctAnswer: calculateAnswer(item),
+                userAnswer: '',
+                status: 'pending' // pending, correct, incorrect
+            }));
+            renderTable();
+            updateStats();
+            hideFeedback();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('exercise-tbody');
+            tbody.innerHTML = '';
+
+            currentRows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors";
+
+                // Row Number
+                const tdIndex = `<td class="p-3.5 sm:p-4 text-center text-slate-500 font-semibold">${index + 1}</td>`;
+
+                // Columns: E, I, R, r
+                const cols = [
+                    { name: 'E', val: row.E, textClass: 'text-yellow-300' },
+                    { name: 'I', val: row.I, textClass: 'text-sky-300' },
+                    { name: 'R', val: row.R, textClass: 'text-emerald-300' },
+                    { name: 'r', val: row.r, textClass: 'text-purple-300' },
+                ];
+
+                let rowHtml = tdIndex;
+
+                cols.forEach(col => {
+                    if (col.val !== null) {
+                        rowHtml += `<td class="p-3.5 sm:p-4 font-semibold ${col.textClass}">${col.val}</td>`;
+                    } else {
+                        // Editable Input cell
+                        let statusClass = "bg-slate-800/90 border-slate-700 text-sky-300";
+                        if (row.status === 'correct') statusClass = "correct-cell font-bold";
+                        if (row.status === 'incorrect') statusClass = "incorrect-cell font-bold";
+
+                        rowHtml += `
+                            <td class="p-2 sm:p-3">
+                                <input 
+                                    type="number" 
+                                    step="any"
+                                    id="input-row-${index}"
+                                    value="${row.userAnswer}"
+                                    oninput="handleInput(${index}, this.value)"
+                                    onkeydown="handleKeyDown(event, ${index})"
+                                    placeholder="?"
+                                    class="w-full max-w-[130px] px-3 py-1.5 rounded-lg border text-center font-mono text-base font-bold transition-all input-cell ${statusClass}"
+                                />
+                            </td>
+                        `;
+                    }
+                });
+
+                // Status Icon Badge
+                let statusBadge = `<span class="text-slate-600"><i class="fa-solid fa-minus"></i></span>`;
+                if (row.status === 'correct') {
+                    statusBadge = `<span class="text-green-400 font-semibold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check"></i> Вірно</span>`;
+                } else if (row.status === 'incorrect') {
+                    statusBadge = `<span class="text-red-400 font-semibold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-xmark"></i> Помилка</span>`;
+                }
+
+                rowHtml += `<td class="p-3.5 sm:p-4 text-center">${statusBadge}</td>`;
+
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleInput(rowIndex, val) {
+            playSound('click');
+            currentRows[rowIndex].userAnswer = val.trim();
+            if (currentRows[rowIndex].status !== 'pending') {
+                currentRows[rowIndex].status = 'pending';
+                renderTable();
+            }
+        }
+
+        function handleKeyDown(e, index) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAnswers();
+            }
+        }
+
+        function checkAnswers() {
+            let correctCount = 0;
+            let filledCount = 0;
+            let hasError = false;
+
+            currentRows.forEach((row, i) => {
+                const inputEl = document.getElementById(`input-row-${i}`);
+                if (!inputEl) return;
+
+                const val = parseFloat(row.userAnswer.replace(',', '.'));
+
+                if (!isNaN(val)) {
+                    filledCount++;
+                    // Margin of error tolerance for decimals
+                    if (Math.abs(val - row.correctAnswer) < 0.05) {
+                        row.status = 'correct';
+                        correctCount++;
+                    } else {
+                        row.status = 'incorrect';
+                        hasError = true;
+                    }
+                } else {
+                    row.status = 'pending';
+                }
+            });
+
+            attemptsCount++;
+            renderTable();
+            updateStats();
+
+            // Feedback logic
+            if (correctCount === currentRows.length) {
+                playSound('success');
+                showFeedback('success', 'Відмінна робота! 🌟', 'Ви правильно розрахували всі величини закону Ома для повного кола!');
+            } else if (hasError) {
+                playSound('error');
+                showFeedback('error', 'Припустилися помилки 🧐', 'Перевірте виділені червоним рядки. Не забудьте, що повний опір дорівнює (R + r)!');
+            } else if (filledCount < currentRows.length) {
+                playSound('click');
+                showFeedback('info', 'Заповніть порожні клітинки ✏️', `Ви правильно відповіли на ${correctCount} з ${currentRows.length} завдань.`);
+            }
+        }
+
+        function updateStats() {
+            const correctTotal = currentRows.filter(r => r.status === 'correct').length;
+            const total = currentRows.length;
+            
+            document.getElementById('score-counter').innerText = `${correctTotal} / ${total}`;
+
+            let accuracy = 100;
+            if (attemptsCount > 0) {
+                accuracy = Math.round((correctTotal / total) * 100);
+            }
+            document.getElementById('accuracy-counter').innerText = `${accuracy}%`;
+        }
+
+        function generateNewExercise() {
+            playSound('click');
+            const newDataset = [];
+            for (let i = 0; i < 8; i++) {
+                newDataset.push(generateRandomConvenientTask());
+            }
+            loadDataset(newDataset);
+        }
+
+        function clearInputs() {
+            playSound('click');
+            currentRows.forEach(row => {
+                row.userAnswer = '';
+                row.status = 'pending';
+            });
+            renderTable();
+            hideFeedback();
+        }
+
+        function showFeedback(type, title, text) {
+            const banner = document.getElementById('feedback-banner');
+            const icon = document.getElementById('feedback-icon');
+            const titleEl = document.getElementById('feedback-title');
+            const textEl = document.getElementById('feedback-text');
+
+            banner.classList.remove('hidden', 'border-green-500/30', 'border-red-500/30', 'border-sky-500/30', 'bg-green-950/30', 'bg-red-950/30', 'bg-sky-950/30');
+
+            if (type === 'success') {
+                banner.classList.add('border-green-500/40', 'bg-green-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-trophy"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-green-300';
+            } else if (type === 'error') {
+                banner.classList.add('border-red-500/40', 'bg-red-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-red-300';
+            } else {
+                banner.classList.add('border-sky-500/40', 'bg-sky-950/30');
+                icon.className = 'w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl font-bold';
+                icon.innerHTML = '<i class="fa-solid fa-info"></i>';
+                titleEl.className = 'font-bold text-base sm:text-lg text-sky-300';
+            }
+
+            titleEl.innerText = title;
+            textEl.innerText = text;
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback-banner').classList.add('hidden');
+        }
+
+        function closeFeedback() {
+            hideFeedback();
+        }
+
+        function toggleHintModal() {
+            playSound('click');
+            const modal = document.getElementById('hint-modal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+
+        function toggleFormulas() {
+            playSound('click');
+            const cards = document.getElementById('formula-cards');
+            const icon = document.getElementById('toggle-formulas-icon');
+            const text = document.getElementById('toggle-formulas-text');
+            if (cards.classList.contains('hidden')) {
+                cards.classList.remove('hidden');
+                icon.className = 'fa-solid fa-eye-slash';
+                text.innerText = 'Приховати формули-підказки';
+            } else {
+                cards.classList.add('hidden');
+                icon.className = 'fa-solid fa-eye';
+                text.innerText = 'Показати формули-підказки';
+            }
+        }
+
+        // Initialize on Load
+        window.onload = function() {
+            loadDataset(defaultDataset);
+        };
+    </script>
+</body>
+</html>
